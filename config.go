@@ -53,9 +53,7 @@ type WriteConfig struct {
 
 func (c *Config) debugMode() []zap.Option {
 	var cfgopts []zap.Option
-	if !c.Simple {
-		cfgopts = append(cfgopts, zap.AddCaller(), zap.AddCallerSkip(1), zap.AddStacktrace(zapcore.ErrorLevel))
-	}
+	cfgopts = append(cfgopts, zap.AddCaller(), zap.AddCallerSkip(0), zap.AddStacktrace(zapcore.ErrorLevel))
 	if len(c.HookFunc) != 0 {
 		cfgopts = append(cfgopts, zap.Hooks(c.HookFunc...))
 		// cfgopts = append(cfgopts, zap.Hooks(warnHook()))

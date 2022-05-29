@@ -14,24 +14,50 @@
 package main
 
 import (
-	"github.com/ergoapi/zlog"
+	"net/http"
+
+	"github.com/ergoapi/util/exid"
+	"github.com/ergoapi/zlog/v2"
+	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
 func init() {
 	cfg := zlog.Config{
-		Simple:      true,
+		Simple:      false,
 		HookFunc:    []func(entry zapcore.Entry) error{zlog.ExampleHook()},
-		WriteLog:    false,
-		WriteJSON:   false,
+		WriteLog:    true,
+		WriteJSON:   true,
 		WriteConfig: zlog.WriteConfig{},
 		ServiceName: "example",
 	}
 	zlog.InitZlog(&cfg)
 }
 
+func AddTraceId() gin.HandlerFunc {
+	return func(g *gin.Context) {
+		traceId := g.GetHeader("traceId")
+		if traceId == "" {
+			traceId = exid.GenUUID()
+		}
+		ctx, log := zlog.GetLogger().AddCtx(g.Request.Context(), zap.Any("traceId", traceId))
+		g.Request = g.Request.WithContext(ctx)
+		log.Info("AddTraceId success")
+		g.Next()
+	}
+}
+
+// curl http://127.0.0.1:8888/test
 func main() {
-	zlog.Debug("debug")
-	zlog.Error("err")
-	zlog.Fatal("fatal")
+	g := gin.New()
+	g.Use(AddTraceId())
+	g.GET("/test", func(context *gin.Context) {
+		log := zlog.GetLogger().GetCtx(context.Request.Context())
+		log.Info("test")
+		log.Debug("test")
+		context.JSON(200, "success")
+	})
+	zlog.GetLogger().Info("example success")
+	http.ListenAndServe(":8888", g)
 }

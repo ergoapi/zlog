@@ -13,41 +13,58 @@
 
 package zlog
 
-import "go.uber.org/zap"
+import (
+	"context"
+	"fmt"
+
+	"go.uber.org/zap"
+)
 
 var (
 	// Log log
-	Log *zap.Logger
-	// Zlog log sugar
-	Zlog *zap.SugaredLogger
+	Log *Logger
 )
+
+type Logger struct {
+	*zap.Logger
+
+	CtxKey string
+}
 
 // InitZlog 初始化日志
 func InitZlog(cfg *Config) {
-	Log = zap.New(cfg.getCores()).WithOptions(cfg.debugMode()...)
-	Zlog = Log.Sugar()
+	zlog := zap.New(cfg.getCores()).WithOptions(cfg.debugMode()...)
+	Log = &Logger{}
+	Log.Logger = zlog
+	defer Log.Logger.Sync()
 }
 
-func Debug(f string, args ...interface{}) {
-	Zlog.Debugf(f, args...)
+func GetLogger() *Logger {
+	if Log == nil {
+		fmt.Println("zlog not init")
+		return nil
+	}
+	return Log
 }
 
-func Info(f string, args ...interface{}) {
-	Zlog.Infof(f, args...)
+func (l *Logger) GetCtx(ctx context.Context) *zap.Logger {
+	log, ok := ctx.Value(l.CtxKey).(*zap.Logger)
+	if ok {
+		return log
+	}
+	return l.Logger
 }
 
-func Warn(f string, args ...interface{}) {
-	Zlog.Warnf(f, args...)
+func (l *Logger) WithContext(ctx context.Context) *zap.Logger {
+	log, ok := ctx.Value(l.CtxKey).(*zap.Logger)
+	if ok {
+		return log
+	}
+	return l.Logger
 }
 
-func Error(f string, args ...interface{}) {
-	Zlog.Errorf(f, args...)
-}
-
-func Panic(f string, args ...interface{}) {
-	Zlog.Panicf(f, args...)
-}
-
-func Fatal(f string, args ...interface{}) {
-	Zlog.Panicf(f, args...)
+func (l *Logger) AddCtx(ctx context.Context, field ...zap.Field) (context.Context, *zap.Logger) {
+	log := l.With(field...)
+	ctx = context.WithValue(ctx, l.CtxKey, log)
+	return ctx, log
 }
