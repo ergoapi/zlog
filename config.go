@@ -41,6 +41,8 @@ type Config struct {
 	WriteJSON   bool                              // json
 	WriteConfig WriteConfig
 	ServiceName string
+	Caller      bool
+	CallerSkip  int
 }
 
 // WriteConfig 写日志配置
@@ -53,7 +55,13 @@ type WriteConfig struct {
 
 func (c *Config) debugMode() []zap.Option {
 	var cfgopts []zap.Option
-	cfgopts = append(cfgopts, zap.AddCaller(), zap.AddCallerSkip(0), zap.AddStacktrace(zapcore.ErrorLevel))
+	cfgopts = append(cfgopts, zap.AddStacktrace(zapcore.ErrorLevel))
+	if c.Caller {
+		cfgopts = append(cfgopts, zap.AddCaller())
+		if c.CallerSkip > 0 {
+			cfgopts = append(cfgopts, zap.AddCallerSkip(c.CallerSkip))
+		}
+	}
 	if len(c.HookFunc) != 0 {
 		cfgopts = append(cfgopts, zap.Hooks(c.HookFunc...))
 		// cfgopts = append(cfgopts, zap.Hooks(warnHook()))
@@ -70,6 +78,7 @@ func (c *Config) getEncoder(enablejson bool) zapcore.Encoder {
 	encoderConfig := zap.NewProductionEncoderConfig()
 	encoderConfig.EncodeTime = timeEncoder
 	encoderConfig.EncodeLevel = zapcore.CapitalLevelEncoder
+	encoderConfig.EncodeCaller = zapcore.FullCallerEncoder
 	if enablejson {
 		return zapcore.NewJSONEncoder(encoderConfig)
 	}
