@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/ergoapi/util v0.2.2
-	go.uber.org/zap v1.21.0
+	go.uber.org/zap v1.24.0
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 )
 
